@@ -19,4 +19,10 @@ _cgo_export.*
 
 _testmain.go
 
+# Ignore executables
 *.exe
+csscompress/csscompress
+
+
+# Ignore our test input and output files
+*.css
