@@ -2,7 +2,7 @@ package BrownLegoCSS
 
 import (
 	"bytes"
-	"fmt"
+	//"fmt"
 	"regexp"
 	"strconv"
 	//"strings"
@@ -11,6 +11,7 @@ import (
 type CssCompressor struct {
 	Css             []byte
 	preservedTokens []string
+	comments        []string
 }
 
 func (c *CssCompressor) extractDataUris() {
@@ -78,22 +79,35 @@ func (c *CssCompressor) extractDataUris() {
 }
 
 func (c *CssCompressor) extractComments() {
-	c.Css = []byte("/* This is a comment yo */ body { margin: 0px; } /* giggle */")
+	//c.Css = []byte("/* This is a comment yo */ body { margin: 0px; } /* giggle */")
 
-	re, _ := regexp.Compile("\\/\\*")
+	re, _ := regexp.Compile("\\/\\*[\\s\\w]+\\*\\/")
 
-	match := re.FindAll(c.Css, -1)
-	index := re.FindAllIndex(c.Css, -1)
-	fmt.Printf("%s", match)
-	fmt.Printf("%s", index)
+	var sb bytes.Buffer
+	previousIndex := 0
 
-	//tmpCss := string(c.Css)
+	indexes := re.FindAllIndex(c.Css, -1)
 
-	//for startIndex := strings.Index(tmpCss[startIndex:], "/*"); startIndex >= 0; startIndex = strings.Index(tmpCss[startIndex:], "/*") {
-	//endIndex = strings.Index(tmpCss[startIndex+2:], "*/")
-	//fmt.Println(endIndex)
-	//startIndex += 2
-	//}
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+
+		c.comments = append(c.comments, string(c.Css[i[0]+2:i[1]-2]))
+		sb.WriteString(
+			string(c.Css[i[0]:i[0]+2]) +
+				"___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_" +
+				(strconv.Itoa(counter)) +
+				"___" +
+				string(c.Css[i[1]-2:i[1]]))
+
+		previousIndex = i[1]
+	}
+
+	// Our string buffer is not empty, so something must have changed.
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
 }
 
 func (c *CssCompressor) Compress() string {
