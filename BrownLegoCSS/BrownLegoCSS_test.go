@@ -1,7 +1,12 @@
 package BrownLegoCSS
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -156,6 +161,43 @@ func testProcessComments(t *testing.T) {
 	}
 }
 
+var testFiles []string
+
+func testEverything(t *testing.T) {
+	filepath.Walk("./tests/", visit)
+
+	for _, f := range testFiles {
+		minFile := "./tests/" + f + ".min"
+		if _, err := os.Stat(minFile); os.IsNotExist(err) {
+			continue
+		}
+		fmt.Printf("Now Testing %s ...\n", f)
+
+		testContents, _ := ioutil.ReadFile("./tests/" + f)
+		compareContents, _ := ioutil.ReadFile(minFile)
+
+		compareContents = bytes.TrimSpace(compareContents)
+
+		compressor := CssCompressor{Css: testContents}
+		results := compressor.Compress(-1)
+		if results != string(compareContents) {
+			fmt.Printf("%s\n", minFile)
+			fmt.Printf("Attempting to compare\n%s\nwith\n%s\n...\n", results, compareContents)
+			t.Errorf("testEverything: %q's contents do not match the results", f)
+		}
+	}
+}
+
+func visit(path string, f os.FileInfo, err error) error {
+	if !f.IsDir() {
+		name := f.Name()
+		if strings.LastIndex(name, ".css") == len(name)-4 {
+			testFiles = append(testFiles, name)
+		}
+	}
+	return nil
+}
+
 func Test(t *testing.T) {
 	// First we test the individual extraction functions...
 	testExtractDataUris(t)
@@ -165,4 +207,5 @@ func Test(t *testing.T) {
 
 	// ...then we test the full compilation using various test-cases
 	// from https://github.com/yui/yuicompressor/blob/master/tests/
+	testEverything(t)
 }
