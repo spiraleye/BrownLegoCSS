@@ -172,15 +172,13 @@ func (c *CssCompressor) processComments() {
 		// \ in the last position looks like hack for Mac/IE5/Opera
 		// shorten that to /*\*/ and the next one to /**/
 		// TODO: this doesn't seem to be working as intended, even in the Java version.
-		if strings.LastIndex(token, "\\") == len(token)-1 {
+		if token != "" && strings.LastIndex(token, "\\") == len(token)-1 {
 			c.preservedTokens = append(c.preservedTokens, "\\")
 			c.Css = bytes.Replace(c.Css, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
 
-			// I don't trust the below code at all at the moment, so I'm simply
-			// going to comment it out for now.
-			//i = i + 1 // attn: advancing the loop
-			//c.preservedTokens = append(c.preservedTokens, "")
-			//c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_"+strconv.Itoa(i)+"___"), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
+			i = i + 1 // attn: advancing the loop
+			c.preservedTokens = append(c.preservedTokens, "")
+			c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_"+strconv.Itoa(i)+"___"), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
 
 			continue
 		}

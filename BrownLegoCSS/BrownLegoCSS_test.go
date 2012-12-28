@@ -147,7 +147,7 @@ func testProcessComments(t *testing.T) {
 		{"123 /*! Preserve comment */", "123 /*___YUICSSMIN_PRESERVED_TOKEN_0___*/"},
 		{"123 /* Multiple */ comment /* Comments */", "123  comment "},
 		// Not quite sure if the below is correct...
-		{"/* Hack comment \\*/ /* asdf */", "/*___YUICSSMIN_PRESERVED_TOKEN_0___*/ "},
+		{"/* Hack comment \\*/ kek /**/ /* asdf */", "/*___YUICSSMIN_PRESERVED_TOKEN_0___*/ kek /*___YUICSSMIN_PRESERVED_TOKEN_1___*/ "},
 	}
 	for i, c := range tests {
 		compressor := CssCompressor{}
