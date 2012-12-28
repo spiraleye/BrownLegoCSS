@@ -146,8 +146,8 @@ func testProcessComments(t *testing.T) {
 		{"/** Slightly Strange comment **/ test", " test"},
 		{"123 /*! Preserve comment */", "123 /*___YUICSSMIN_PRESERVED_TOKEN_0___*/"},
 		{"123 /* Multiple */ comment /* Comments */", "123  comment "},
-		// Not quite sure if the below is correct...
 		{"/* Hack comment \\*/ kek /**/ /* asdf */", "/*___YUICSSMIN_PRESERVED_TOKEN_0___*/ kek /*___YUICSSMIN_PRESERVED_TOKEN_1___*/ "},
+		{"/* Hack comment \\*/ kek /* asdf */", "/*___YUICSSMIN_PRESERVED_TOKEN_0___*/ kek /*___YUICSSMIN_PRESERVED_TOKEN_1___*/"},
 	}
 	for i, c := range tests {
 		compressor := CssCompressor{}
@@ -171,7 +171,7 @@ func testEverything(t *testing.T) {
 		if _, err := os.Stat(minFile); os.IsNotExist(err) {
 			continue
 		}
-		fmt.Printf("Now Testing %s ...\n", f)
+		t.Logf("Now Testing %s ...\n", f)
 
 		testContents, _ := ioutil.ReadFile("./tests/" + f)
 		compareContents, _ := ioutil.ReadFile(minFile)
@@ -181,8 +181,8 @@ func testEverything(t *testing.T) {
 		compressor := CssCompressor{Css: testContents}
 		results := compressor.Compress(-1)
 		if results != string(compareContents) {
-			fmt.Printf("%s\n", minFile)
-			fmt.Printf("Attempting to compare\n%s\nwith\n%s\n...\n", results, compareContents)
+			t.Logf("%s\n", minFile)
+			t.Logf("Attempting to compare\n%s\nwith\n%s\n...\n", results, compareContents)
 			t.Errorf("testEverything: %q's contents do not match the results", f)
 		}
 	}
