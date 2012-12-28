@@ -25,4 +25,4 @@ csscompress/csscompress
 
 
 # Ignore our test input and output files
-*.css
+*.css*

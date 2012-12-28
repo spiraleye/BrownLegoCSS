@@ -82,37 +82,29 @@ func (c *CssCompressor) extractDataUris() {
 }
 
 func (c *CssCompressor) extractComments() {
-	re, _ := regexp.Compile("\\/\\*[\\s\\w]+\\*\\/")
-
 	var sb bytes.Buffer
-	previousIndex := 0
+	startIndex := 0
+	endIndex := 0
 
-	indexes := re.FindAllIndex(c.Css, -1)
+	tmpCss := c.Css
+	for startIndex = bytes.Index(tmpCss, []byte("/*")); startIndex >= 0; {
+		sb.WriteString(string(tmpCss[:startIndex]))
 
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		endIndex = bytes.Index(tmpCss[startIndex+2:], []byte("*/"))
+		if endIndex < 0 {
+			endIndex = len(tmpCss)
 		}
-
-		c.comments = append(c.comments, string(c.Css[i[0]+2:i[1]-2]))
+		c.comments = append(c.comments, string(tmpCss[startIndex+2:endIndex+startIndex+2]))
 		sb.WriteString(
-			string(c.Css[i[0]:i[0]+2]) +
-				"___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_" +
-				(strconv.Itoa(counter)) +
-				"___" +
-				string(c.Css[i[1]-2:i[1]]))
+			string("/*___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_" +
+				(strconv.Itoa(len(c.comments) - 1)) +
+				"___*/"))
 
-		previousIndex = i[1]
+		tmpCss = tmpCss[startIndex+2+endIndex+2:]
+		startIndex = bytes.Index(tmpCss, []byte("/*"))
 	}
-
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-
-	// Our string buffer is not empty, so something must have changed.
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	sb.WriteString(string(tmpCss))
+	c.Css = sb.Bytes()
 }
 
 func (c *CssCompressor) extractStrings() {
@@ -183,9 +175,13 @@ func (c *CssCompressor) processComments() {
 		if strings.LastIndex(token, "\\") == len(token)-1 {
 			c.preservedTokens = append(c.preservedTokens, "\\")
 			c.Css = bytes.Replace(c.Css, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
-			i = i + 1 // attn: advancing the loop
-			c.preservedTokens = append(c.preservedTokens, "")
-			c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_"+strconv.Itoa(i)+"___"), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
+
+			// I don't trust the below code at all at the moment, so I'm simply
+			// going to comment it out for now.
+			//i = i + 1 // attn: advancing the loop
+			//c.preservedTokens = append(c.preservedTokens, "")
+			//c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_"+strconv.Itoa(i)+"___"), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
+
 			continue
 		}
 
@@ -213,7 +209,8 @@ func (c *CssCompressor) performGeneralCleanup() {
 	//c.Css = []byte("::selection { \n  margin: 0.6px 0.333pt 1.2em 8.8cm;\n}\n")
 	//c.Css = []byte(".color {\n  me: rgb(123, 123, 123);\n  }\n")
 	//c.Css = []byte(".foo, #AABBCC {\n  background-color:#aabbcc;\n  border-color:#Ee66aA #ABCDEF #FeAb2C;\n  filter:chroma(color = #FFFFFF );\n  filter:chroma(color=\"#AABBCC\");\n  filter:chroma(color='#BBDDEE');\n  color:#112233\n}\n")
-	c.Css = []byte(".color {\n  me: rgb(123, 123, 123);\n  impressed: #FfEedD;\n  again: #ABCDEF;\n  andagain:#aa66cc;\n  background-color:#aa66ccc;\n  filter: chroma(color=\"#FFFFFF\");\n  background: none repeat scroll 0 0 rgb(255, 0,0);\n  alpha: rgba(1, 2, 3, 4);\n  color:#1122aa\n}\n\n#AABBCC {\n  background-color:#ffee11;\n  filter: chroma(color = #FFFFFF );\n  color:#441122;\n  foo:#00fF11 #ABC #AABbCc #123344;\n  border-color:#aa66ccC\n}\n\n.foo #AABBCC {\n  background-color:#fFEe11;\n  color:#441122;\n  border-color:#AbC;\n  filter: chroma(color= #FFFFFF)\n}\n\n.bar, #AABBCC {\n  background-color:#FFee11;\n  border-color:#00fF11 #ABCDEF;\n  filter: chroma(color=#11FFFFFF);\n  color:#441122;\n}\n\n.foo, #AABBCC.foobar {\n  background-color:#ffee11;\n  border-color:#00fF11 #ABCDEF #AABbCc;\n  color:#441122;\n}\n\n@media screen {\n    .bar, #AABBCC {\n      background-color:#ffEE11;\n      color:#441122\n    }\n}\n")
+	//c.Css = []byte(".color {\n  me: rgb(123, 123, 123);\n  impressed: #FfEedD;\n  again: #ABCDEF;\n  andagain:#aa66cc;\n  background-color:#aa66ccc;\n  filter: chroma(color=\"#FFFFFF\");\n  background: none repeat scroll 0 0 rgb(255, 0,0);\n  alpha: rgba(1, 2, 3, 4);\n  color:#1122aa\n}\n\n#AABBCC {\n  background-color:#ffee11;\n  filter: chroma(color = #FFFFFF );\n  color:#441122;\n  foo:#00fF11 #ABC #AABbCc #123344;\n  border-color:#aa66ccC\n}\n\n.foo #AABBCC {\n  background-color:#fFEe11;\n  color:#441122;\n  border-color:#AbC;\n  filter: chroma(color= #FFFFFF)\n}\n\n.bar, #AABBCC {\n  background-color:#FFee11;\n  border-color:#00fF11 #ABCDEF;\n  filter: chroma(color=#11FFFFFF);\n  color:#441122;\n}\n\n.foo, #AABBCC.foobar {\n  background-color:#ffee11;\n  border-color:#00fF11 #ABCDEF #AABbCc;\n  color:#441122;\n}\n\n@media screen {\n    .bar, #AABBCC {\n      background-color:#ffEE11;\n      color:#441122\n    }\n}\n")
+	//c.Css = []byte("a {\n    border: none;\n}\nb {BACKGROUND:none}\ns {border-top: none;}\n")
 
 	// This function does a lot, ok?
 
@@ -242,6 +239,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 	if sb.Len() > 0 {
 		c.Css = sb.Bytes()
 	}
+
 	// Remove spaces before the things that should not have spaces before them.
 	re, _ = regexp.Compile("\\s+([!{};:>+\\(\\)\\],])")
 	c.Css = re.ReplaceAll(c.Css, []byte("$1"))
@@ -313,6 +311,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 	// Shorten colors from rgb(51,102,153) to #336699
 	// This makes it more likely that it'll get further compressed in the next step.
 	sb.Reset()
+	previousIndex = 0
 	re, _ = regexp.Compile("rgb\\s*\\(\\s*([0-9,\\s]+)\\s*\\)")
 	indexes = re.FindAllIndex(c.Css, -1)
 	groups = re.FindAllStringSubmatch(string(c.Css), -1)
@@ -390,11 +389,48 @@ func (c *CssCompressor) performGeneralCleanup() {
 		c.Css = sb.Bytes()
 	}
 
-	fmt.Printf("%s", c.Css)
+	// border: none -> border:0
+	re, _ = regexp.Compile("(?i)(border|border-top|border-right|border-bottom|border-left|outline|background):none(;|})")
+	sb.Reset()
+	previousIndex = 0
+	indexes = re.FindAllIndex(c.Css, -1)
+	groups = re.FindAllStringSubmatch(string(c.Css), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+		s := strings.ToLower(groups[counter][1]) + ":0" + groups[counter][2]
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(c.Css[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
 
+	// shorter opacity IE filter
+	re, _ = regexp.Compile("(?i)progid:DXImageTransform.Microsoft.Alpha\\(Opacity=")
+	c.Css = re.ReplaceAll(c.Css, []byte("alpha(opacity="))
+
+	// Remove empty rules.
+	re, _ = regexp.Compile("[^\\}\\{/;]+\\{\\}")
+	c.Css = re.ReplaceAll(c.Css, []byte(""))
 }
 
-func (c *CssCompressor) Compress() string {
+func (c *CssCompressor) insertLineBreaks(lineBreakPos int) {
+	// TODO: Should this be after we re-insert tokens. These could alter the break points. However then
+	// we'd need to make sure we don't break in the middle of a string etc.
+
+	// Some source control tools don't like it when files containing lines longer
+	// than, say 8000 characters, are checked in. The linebreak option is used in
+	// that case to split long lines after a specific column.
+
+	// TO BE IMPLEMENTED :P
+}
+
+func (c *CssCompressor) Compress(lineBreakPos int) string {
 	c.extractDataUris()
 	c.extractComments()
 
@@ -410,8 +446,23 @@ func (c *CssCompressor) Compress() string {
 
 	// Do lots and lots and lots of fun things
 	// TODO: write/copy lots of tests for the function below.
-	// TODO: finish the function below :P
 	c.performGeneralCleanup()
 
-	return "\n"
+	if lineBreakPos >= 0 {
+		c.insertLineBreaks(lineBreakPos)
+	}
+
+	// Replace multiple semi-colons in a row by a single one
+	re, _ = regexp.Compile(";;+")
+	c.Css = re.ReplaceAll(c.Css, []byte(";"))
+
+	// restore preserved comments and strings
+	for i, t := range c.preservedTokens {
+		c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(i)+"___"), []byte(t), -1)
+	}
+
+	// Trim the final string (for any leading or trailing white spaces)
+	c.Css = bytes.TrimSpace(c.Css)
+
+	return string(c.Css)
 }
