@@ -410,17 +410,6 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = re.ReplaceAll(c.Css, []byte(""))
 }
 
-func (c *CssCompressor) insertLineBreaks(lineBreakPos int) {
-	// TODO: Should this be after we re-insert tokens. These could alter the break points. However then
-	// we'd need to make sure we don't break in the middle of a string etc.
-
-	// Some source control tools don't like it when files containing lines longer
-	// than, say 8000 characters, are checked in. The linebreak option is used in
-	// that case to split long lines after a specific column.
-
-	// TO BE IMPLEMENTED :P
-}
-
 func (c *CssCompressor) Compress(lineBreakPos int) string {
 	c.extractDataUris()
 	c.extractComments()
@@ -438,10 +427,6 @@ func (c *CssCompressor) Compress(lineBreakPos int) string {
 	// Do lots and lots and lots of fun things
 	// TODO: write/copy lots of tests for the function below.
 	c.performGeneralCleanup()
-
-	if lineBreakPos >= 0 {
-		c.insertLineBreaks(lineBreakPos)
-	}
 
 	// Replace multiple semi-colons in a row by a single one
 	re, _ = regexp.Compile(";;+")
