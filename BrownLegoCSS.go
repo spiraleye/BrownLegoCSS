@@ -1,3 +1,51 @@
+/*
+ * BrownLegoCSS
+ * https://github.com/spiraleye/BrownLegoCSS
+ * Author: Johan Meiring
+ *
+ * The copyrights embodied in the content of this file are licensed
+ * by Spiraleye Studios under the 3-Clause BSD open source license,
+ * as follows:
+ *
+ * Copyright (c) 2012, Spiraleye Studios
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of Spiraleye Studios nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL Spiraleye Studios BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * This work is derived from work that was originally done by Yahoo! inc:
+ * http://developer.yahoo.com/yui/compressor/
+ * Author: Julien Lecomte -  http://www.julienlecomte.net/
+ * Author: Isaac Schlueter - http://foohack.com/
+ * Author: Stoyan Stefanov - http://phpied.com/
+ * Copyright (c) 2011 Yahoo! Inc.  All rights reserved.
+ * The copyrights embodied in the content of this file are licensed
+ * by Yahoo! Inc. under the BSD (revised) open source license.
+ *
+ * HOWEVER, THE DERIVED WORK IS NOT ENDORSED BY THE ABOVE ORGANISATION AND/OR
+ * INDIVIDUALS IN ANY WAY, SHAPE, OR FORM.
+ *
+ */
+
 package BrownLegoCSS
 
 import (
@@ -70,8 +118,6 @@ func (c *CssCompressor) extractDataUris() {
 	if sb.Len() > 0 {
 		c.Css = sb.Bytes()
 	}
-
-	return
 }
 
 func (c *CssCompressor) extractComments() {
@@ -136,11 +182,9 @@ func (c *CssCompressor) extractStrings() {
 
 		previousIndex = i[1]
 	}
-
 	if previousIndex > 0 {
 		sb.WriteString(string(c.Css[previousIndex:]))
 	}
-
 	// Our string buffer is not empty, so something must have changed.
 	if sb.Len() > 0 {
 		c.Css = sb.Bytes()
@@ -194,15 +238,6 @@ func (c *CssCompressor) processComments() {
 }
 
 func (c *CssCompressor) performGeneralCleanup() {
-	//c.Css = []byte("p :link {\nba:zinga;;;\nfoo: bar;;;\n}")
-	//c.Css = []byte("p:first-letter{\nbuh: hum;\n}\np:first-line{\nbaa: 1;\n}\n\np:first-line,a,p:first-letter,b{\ncolor: red;\n}\n")
-	//c.Css = []byte("a { \n  margin: 0px 0pt 0em 0%;\n  _padding-top: 0ex;\n  background-position: 0 0;\n  padding: 0in 0cm 0mm 0pc\n}\n")
-	//c.Css = []byte("::selection { \n  margin: 0.6px 0.333pt 1.2em 8.8cm;\n}\n")
-	//c.Css = []byte(".color {\n  me: rgb(123, 123, 123);\n  }\n")
-	//c.Css = []byte(".foo, #AABBCC {\n  background-color:#aabbcc;\n  border-color:#Ee66aA #ABCDEF #FeAb2C;\n  filter:chroma(color = #FFFFFF );\n  filter:chroma(color=\"#AABBCC\");\n  filter:chroma(color='#BBDDEE');\n  color:#112233\n}\n")
-	//c.Css = []byte(".color {\n  me: rgb(123, 123, 123);\n  impressed: #FfEedD;\n  again: #ABCDEF;\n  andagain:#aa66cc;\n  background-color:#aa66ccc;\n  filter: chroma(color=\"#FFFFFF\");\n  background: none repeat scroll 0 0 rgb(255, 0,0);\n  alpha: rgba(1, 2, 3, 4);\n  color:#1122aa\n}\n\n#AABBCC {\n  background-color:#ffee11;\n  filter: chroma(color = #FFFFFF );\n  color:#441122;\n  foo:#00fF11 #ABC #AABbCc #123344;\n  border-color:#aa66ccC\n}\n\n.foo #AABBCC {\n  background-color:#fFEe11;\n  color:#441122;\n  border-color:#AbC;\n  filter: chroma(color= #FFFFFF)\n}\n\n.bar, #AABBCC {\n  background-color:#FFee11;\n  border-color:#00fF11 #ABCDEF;\n  filter: chroma(color=#11FFFFFF);\n  color:#441122;\n}\n\n.foo, #AABBCC.foobar {\n  background-color:#ffee11;\n  border-color:#00fF11 #ABCDEF #AABbCc;\n  color:#441122;\n}\n\n@media screen {\n    .bar, #AABBCC {\n      background-color:#ffEE11;\n      color:#441122\n    }\n}\n")
-	//c.Css = []byte("a {\n    border: none;\n}\nb {BACKGROUND:none}\ns {border-top: none;}\n")
-
 	// This function does a lot, ok?
 
 	// Remove the spaces before the things that should not have spaces before them.
@@ -275,6 +310,8 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = re2.ReplaceAll(c.Css, []byte(":0$1"))
 	c.Css = re3.ReplaceAll(c.Css, []byte(":0$1"))
 
+	// Replace background-position:0; with background-position:0 0;
+	// same for transform-origin
 	sb.Reset()
 	re, _ = regexp.Compile("(?i)(background-position|transform-origin|webkit-transform-origin|moz-transform-origin|o-transform-origin|ms-transform-origin):0(;|})")
 	previousIndex = 0
@@ -425,10 +462,9 @@ func (c *CssCompressor) Compress() string {
 	c.Css = re.ReplaceAll(c.Css, []byte(" "))
 
 	// Do lots and lots and lots of fun things
-	// TODO: write/copy lots of tests for the function below.
 	c.performGeneralCleanup()
 
-	// Replace multiple semi-colons in a row by a single one
+	// Replace multiple semi-colons in a row with a single one
 	re, _ = regexp.Compile(";;+")
 	c.Css = re.ReplaceAll(c.Css, []byte(";"))
 
@@ -440,5 +476,6 @@ func (c *CssCompressor) Compress() string {
 	// Trim the final string (for any leading or trailing white spaces)
 	c.Css = bytes.TrimSpace(c.Css)
 
+	// Hooray, we're done!
 	return string(c.Css)
 }
