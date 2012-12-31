@@ -3,7 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/spiraleye/BrownLegoCSS/BrownLegoCSS"
+	"github.com/spiraleye/BrownLegoCSS"
 	"io/ioutil"
 	"os"
 )
