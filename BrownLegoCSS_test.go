@@ -179,7 +179,7 @@ func testEverything(t *testing.T) {
 		compareContents = bytes.TrimSpace(compareContents)
 
 		compressor := CssCompressor{Css: testContents}
-		results := compressor.Compress(-1)
+		results := compressor.Compress()
 		if results != string(compareContents) {
 			t.Logf("%s\n", minFile)
 			t.Logf("Attempting to compare\n%s\nwith\n%s\n...\n", results, compareContents)

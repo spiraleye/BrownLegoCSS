@@ -410,7 +410,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = re.ReplaceAll(c.Css, []byte(""))
 }
 
-func (c *CssCompressor) Compress(lineBreakPos int) string {
+func (c *CssCompressor) Compress() string {
 	c.extractDataUris()
 	c.extractComments()
 

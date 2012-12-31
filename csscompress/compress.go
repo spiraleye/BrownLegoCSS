@@ -6,23 +6,39 @@ import (
 	"github.com/spiraleye/BrownLegoCSS"
 	"io/ioutil"
 	"os"
+	"strings"
 )
 
 func main() {
-	var filename string
-	flag.StringVar(&filename, "input", "", "Input CSS file for compression")
-	flag.StringVar(&filename, "i", "", "Input CSS file for compression (shorthand)")
+	var outfile string
+	flag.StringVar(&outfile, "o", "", "Target file for minified output")
 	flag.Parse()
 
-	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		fmt.Printf("%s does not exist: %s\n", filename, err)
-		os.Exit(1)
+	// Let the concurrency magic begin.
+	dataChan := make(chan string)
+	results := []string{}
+
+	go func() {
+		for _, infile := range flag.Args() {
+			contents, err := ioutil.ReadFile(infile)
+			if err != nil {
+				fmt.Printf("Error reading file %s: %s\n", infile, err)
+			} else {
+				compressor := BrownLegoCSS.CssCompressor{Css: contents}
+				compressed := compressor.Compress()
+				dataChan <- compressed
+			}
+		}
+		close(dataChan)
+	}()
+
+	for stringy := range dataChan {
+		results = append(results, stringy)
 	}
-	contents, err := ioutil.ReadFile(filename)
-	if err != nil {
-		fmt.Printf("Error reading file %s: %s\n", filename, err)
-		os.Exit(1)
-	}
-	compressor := BrownLegoCSS.CssCompressor{Css: contents}
-	fmt.Printf("%s", compressor.Compress())
+
+	outputString := strings.Join(results, "")
+
+	ioutil.WriteFile(outfile, []byte(outputString), 0644)
+
+	os.Exit(0)
 }
