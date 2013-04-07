@@ -42,39 +42,69 @@ import (
 	"github.com/spiraleye/BrownLegoCSS"
 	"io/ioutil"
 	"os"
-	"strings"
+	"runtime"
+	"sync"
 )
 
+type Data struct {
+	idx int
+	bts []byte
+}
+
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
 	var outfile string
 	flag.StringVar(&outfile, "o", "", "Target file for minified output")
 	flag.Parse()
 
 	// Let the concurrency magic begin.
-	dataChan := make(chan string)
-	results := []string{}
+	dataChan := make(chan Data)
+	results := make([][]byte, len(flag.Args()))
+
+	var wg sync.WaitGroup
+	var m sync.Mutex
 
 	// Dynamic gofunc to compress multiple files' contents at the same time.
 	go func() {
-		for _, infile := range flag.Args() {
+		for i, infile := range flag.Args() {
 			contents, err := ioutil.ReadFile(infile)
 			if err != nil {
 				fmt.Printf("Error reading file %s: %s\n", infile, err)
 			} else {
-				compressor := BrownLegoCSS.CssCompressor{Css: contents}
-				compressedString := compressor.Compress()
-				dataChan <- compressedString
+				dataChan <- Data{idx: i, bts: contents}
 			}
 		}
 		close(dataChan)
 	}()
 
 	// Grab data from the channel and append it to our slice.
-	for tmpString := range dataChan {
-		results = append(results, tmpString)
+	for cssdata := range dataChan {
+		//fmt.Printf("Read file for %d\n", cssdata.idx)
+		imanoob := Data{idx: cssdata.idx, bts: cssdata.bts}
+		wg.Add(1)
+		go func() {
+			//fmt.Printf("Starting %d\n", imanoob.idx)
+			compressor := BrownLegoCSS.CssCompressor{Css: imanoob.bts}
+			csresult := compressor.Compress()
+			m.Lock()
+			results[imanoob.idx] = csresult
+			m.Unlock()
+			wg.Done()
+			//fmt.Printf("Done %d\n", imanoob.idx)
+		}()
 	}
+	wg.Wait()
+	//fmt.Printf("Over waiting, writing file")
 
-	outputString := strings.Join(results, "")
-	ioutil.WriteFile(outfile, []byte(outputString), 0644)
+	of, oe := os.Create(outfile)
+	if oe == nil {
+		for i := 0; i < len(flag.Args()); i++ {
+			if results[i] != nil {
+				of.Write(results[i])
+			}
+		}
+	}
+	of.Close()
 	os.Exit(0)
 }
