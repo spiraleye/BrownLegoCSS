@@ -447,7 +447,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = re.ReplaceAll(c.Css, []byte(""))
 }
 
-func (c *CssCompressor) Compress() string {
+func (c *CssCompressor) Compress() []byte {
 	c.extractDataUris()
 	c.extractComments()
 
@@ -477,5 +477,5 @@ func (c *CssCompressor) Compress() string {
 	c.Css = bytes.TrimSpace(c.Css)
 
 	// Hooray, we're done!
-	return string(c.Css)
+	return c.Css
 }
