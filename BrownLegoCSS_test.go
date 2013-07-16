@@ -205,7 +205,6 @@ var testFiles []string
 
 func testEverything(t *testing.T) {
 	filepath.Walk("./tests/", visit)
-
 	for _, f := range testFiles {
 		minFile := "./tests/" + f + ".min"
 		if _, err := os.Stat(minFile); os.IsNotExist(err) {
@@ -220,7 +219,7 @@ func testEverything(t *testing.T) {
 
 		compressor := CssCompressor{Css: testContents}
 		results := compressor.Compress()
-		if results != string(compareContents) {
+		if string(results) != string(compareContents) {
 			t.Logf("%s\n", minFile)
 			t.Logf("Attempting to compare\n%s\nwith\n%s\n...\n", results, compareContents)
 			t.Errorf("testEverything: %q's contents do not match the results", f)
