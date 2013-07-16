@@ -81,17 +81,17 @@ func main() {
 	// Grab data from the channel and append it to our slice.
 	for cssdata := range dataChan {
 		//fmt.Printf("Read file for %d\n", cssdata.idx)
-		imanoob := Data{idx: cssdata.idx, bts: cssdata.bts}
+		data_fragment := Data{idx: cssdata.idx, bts: cssdata.bts}
 		wg.Add(1)
 		go func() {
-			//fmt.Printf("Starting %d\n", imanoob.idx)
-			compressor := BrownLegoCSS.CssCompressor{Css: imanoob.bts}
+			//fmt.Printf("Starting %d\n", data_fragment.idx)
+			compressor := BrownLegoCSS.CssCompressor{Css: data_fragment.bts}
 			csresult := compressor.Compress()
 			m.Lock()
-			results[imanoob.idx] = csresult
+			results[data_fragment.idx] = csresult
 			m.Unlock()
 			wg.Done()
-			//fmt.Printf("Done %d\n", imanoob.idx)
+			//fmt.Printf("Done %d\n", data_fragment.idx)
 		}()
 	}
 	wg.Wait()
