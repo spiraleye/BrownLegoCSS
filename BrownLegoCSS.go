@@ -462,9 +462,17 @@ func (c *CssCompressor) performGeneralCleanup() {
 	re, _ = regexp.Compile("(?i)progid:DXImageTransform.Microsoft.Alpha\\(Opacity=")
 	c.Css = re.ReplaceAll(c.Css, []byte("alpha(opacity="))
 
+	// Find a fraction that is used for Opera's -o-device-pixel-ratio query
+	// Add token to add the "\" back in later
+	re, _ = regexp.Compile("\\(([\\-A-Za-z]+):([0-9]+)\\/([0-9]+)\\)")
+	c.Css = re.ReplaceAll(c.Css, []byte("(${1}:${2}___YUI_QUERY_FRACTION___${3})"))
+
 	// Remove empty rules.
 	re, _ = regexp.Compile("[^\\}\\{/;]+\\{\\}")
 	c.Css = re.ReplaceAll(c.Css, []byte(""))
+
+	// Add "\" back to fix Opera -o-device-pixel-ratio query
+	c.Css = bytes.Replace(c.Css, []byte("___YUI_QUERY_FRACTION___"), []byte("/"), -1)
 }
 
 func (c *CssCompressor) Compress() []byte {
