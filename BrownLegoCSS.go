@@ -417,6 +417,26 @@ func (c *CssCompressor) performGeneralCleanup() {
 		c.Css = sb.Bytes()
 	}
 
+	// Replace #f00 -> red
+	// re, _ = regexp.Compile("(:|\\s)(#f00)(;|})")
+	// c.Css = re.ReplaceAll(c.Css, []byte("$1red$3"))
+	// Other colors
+	// https://github.com/yui/yuicompressor/commit/fe8cf35d3693910103d65bf465d33b0d602dcfea
+	colours := map[string]string{
+		"#f00":    "red",
+		"#000080": "navy",
+		"#808080": "gray",
+		"#808000": "olive",
+		"#800080": "purple",
+		"#c0c0c0": "silver",
+		"#008080": "teal",
+		"#ffa500": "orange",
+	}
+	for k, v := range colours {
+		re, _ = regexp.Compile("(:|\\s)" + k + "(;|})")
+		c.Css = re.ReplaceAll(c.Css, []byte("${1}"+v+"${2}"))
+	}
+
 	// border: none -> border:0
 	re, _ = regexp.Compile("(?i)(border|border-top|border-right|border-bottom|border-left|outline|background):none(;|})")
 	sb.Reset()
