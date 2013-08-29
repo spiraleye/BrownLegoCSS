@@ -63,7 +63,7 @@ type CssCompressor struct {
 }
 
 func (c *CssCompressor) extractDataUris() {
-	re, _ := regexp.Compile("url\\(\\s*([\"']?)data\\:")
+	re, _ := regexp.Compile("(?i)url\\(\\s*([\"']?)data\\:")
 	re2, _ := regexp.Compile("\\s+")
 
 	var sb bytes.Buffer
@@ -289,7 +289,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 	// Put the space back in some cases, to support stuff like
 	// @media screen and (-webkit-min-device-pixel-ratio:0){
-	re, _ = regexp.Compile("\\band\\(")
+	re, _ = regexp.Compile("(?i)\\band\\(")
 	c.Css = re.ReplaceAll(c.Css, []byte("and ("))
 
 	// Remove the spaces after the things that should not have spaces after them.
@@ -301,8 +301,8 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = re.ReplaceAll(c.Css, []byte("}"))
 
 	// Replace 0(px,em,%) with 0.
-	re, _ = regexp.Compile("([\\s:])(0)(px|em|%|in|cm|mm|pc|pt|ex)")
-	c.Css = re.ReplaceAll(c.Css, []byte("$1$2"))
+	re, _ = regexp.Compile("(?i)(^|[^0-9])(?:0?\\.)?0(?:px|em|%|in|cm|mm|pc|pt|ex|deg|g?rad|m?s|k?hz)")
+	c.Css = re.ReplaceAll(c.Css, []byte("${1}0"))
 
 	// Replace 0 0 0 0; with 0.
 	re, _ = regexp.Compile(":0 0 0 0(;|})")
