@@ -315,7 +315,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 	// Replace background-position:0; with background-position:0 0;
 	// same for transform-origin
 	sb.Reset()
-	re, _ = regexp.Compile("(?i)(background-position|transform-origin|webkit-transform-origin|moz-transform-origin|o-transform-origin|ms-transform-origin):0(;|})")
+	re, _ = regexp.Compile("(?i)(background-position|webkit-mask-position|transform-origin|webkit-transform-origin|moz-transform-origin|o-transform-origin|ms-transform-origin):0(;|})")
 	previousIndex = 0
 	indexes = re.FindAllIndex(c.Css, -1)
 	groups = re.FindAllStringSubmatch(string(c.Css), -1)
