@@ -280,7 +280,6 @@ func (c *CssCompressor) performGeneralCleanup() {
 	previousIndex = 0
 	indexes = re.FindAllIndex(c.Css, -1)
 	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-
 	for counter, i := range indexes {
 		if i[0] > 0 {
 			sb.WriteString(string(c.Css[previousIndex:i[0]]))
@@ -304,6 +303,99 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = re.ReplaceAll(c.Css, []byte("$2$1"))
 	re, _ = regexp.Compile("^(\\s*@charset [^;]+;\\s*)+")
 	c.Css = re.ReplaceAll(c.Css, []byte("$1"))
+
+	// lowercase some popular @directives
+	sb.Reset()
+	re, _ = regexp.Compile("(?i)@(charset|font-face|import|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?keyframe|media|page|namespace)")
+	previousIndex = 0
+	indexes = re.FindAllIndex(c.Css, -1)
+	groups = re.FindAllStringSubmatch(string(c.Css), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+		s := "@" + strings.ToLower(groups[counter][1])
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(c.Css[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
+
+	// lowercase some more common pseudo-elements
+	sb.Reset()
+	re, _ = regexp.Compile("(?i):(active|after|before|checked|disabled|empty|enabled|first-(?:child|of-type)|focus|hover|last-(?:child|of-type)|link|only-(?:child|of-type)|root|:selection|target|visited)")
+	previousIndex = 0
+	indexes = re.FindAllIndex(c.Css, -1)
+	groups = re.FindAllStringSubmatch(string(c.Css), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+		s := ":" + strings.ToLower(groups[counter][1])
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(c.Css[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
+
+	// lowercase some more common functions
+	sb.Reset()
+	re, _ = regexp.Compile("(?i):(lang|not|nth-child|nth-last-child|nth-last-of-type|nth-of-type|(?:-(?:moz|webkit)-)?any)\\(")
+	previousIndex = 0
+	indexes = re.FindAllIndex(c.Css, -1)
+	groups = re.FindAllStringSubmatch(string(c.Css), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+		s := ":" + strings.ToLower(groups[counter][1]) + "("
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(c.Css[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
+
+	// lower case some common function that can be values
+	// NOTE: rgb() isn't useful as we replace with #hex later, as well as and() is already done for us right after this
+	sb.Reset()
+	re, _ = regexp.Compile("(?i)([:,\\( ]\\s*)(attr|color-stop|from|rgba|to|url|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?(?:calc|max|min|(?:repeating-)?(?:linear|radial)-gradient)|-webkit-gradient)")
+	previousIndex = 0
+	indexes = re.FindAllIndex(c.Css, -1)
+	groups = re.FindAllStringSubmatch(string(c.Css), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+		s := groups[counter][1] + strings.ToLower(groups[counter][2])
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(c.Css[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
+	/*+        sb = new StringBuffer();
+	  +        p = Pattern.compile("(?i)([:,\\( ]\\s*)(attr|color-stop|from|rgba|to|url|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?(?:calc|max|min|(?:repeating-)?(?:linear|radial)-gradient)|-webkit-gradient)");
+	  +        m = p.matcher(css);
+	  +        while (m.find()) {
+	  +            m.appendReplacement(sb, m.group(1) + m.group(2).toLowerCase());
+	  +        }
+	  +        m.appendTail(sb);
+	  +        css = sb.toString();*/
 
 	// Put the space back in some cases, to support stuff like
 	// @media screen and (-webkit-min-device-pixel-ratio:0){
