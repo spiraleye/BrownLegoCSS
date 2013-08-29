@@ -269,6 +269,8 @@ func (c *CssCompressor) performGeneralCleanup() {
 	// Remove spaces before the things that should not have spaces before them.
 	re, _ = regexp.Compile("\\s+([!{};:>+\\(\\)\\],])")
 	c.Css = re.ReplaceAll(c.Css, []byte("$1"))
+	// Restore spaces for !important
+	c.Css = bytes.Replace(c.Css, []byte("!important"), []byte(" !important"), -1)
 	// bring back the colon
 	c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PSEUDOCLASSCOLON___"), []byte(":"), -1)
 
