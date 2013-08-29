@@ -299,10 +299,52 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = bytes.Replace(c.Css, []byte("*/ "), []byte("*/"), -1)
 
 	// If there is a @charset, then only allow one, and push to the top of the file.
-	re, _ = regexp.Compile("^(.*)(@charset \"[^\"]*\";)")
-	c.Css = re.ReplaceAll(c.Css, []byte("$2$1"))
-	re, _ = regexp.Compile("^(\\s*@charset [^;]+;\\s*)+")
-	c.Css = re.ReplaceAll(c.Css, []byte("$1"))
+	// re, _ = regexp.Compile("^(.*)(@charset \"[^\"]*\";)")
+	// c.Css = re.ReplaceAll(c.Css, []byte("$2$1"))
+	// re, _ = regexp.Compile("^(\\s*@charset [^;]+;\\s*)+")
+	// c.Css = re.ReplaceAll(c.Css, []byte("$1"))
+
+	// If there are multiple @charset directives, push them to the top of the file.
+	sb.Reset()
+	re, _ = regexp.Compile("(?i)^(.*)(@charset)( \"[^\"]*\";)")
+	previousIndex = 0
+	indexes = re.FindAllIndex(c.Css, -1)
+	groups = re.FindAllStringSubmatch(string(c.Css), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+		s := strings.ToLower(groups[counter][2]) + groups[counter][3] + groups[counter][1]
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(c.Css[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
+
+	// When all @charset are at the top, remove the second and after (as they are completely ignored).
+	sb.Reset()
+	re, _ = regexp.Compile("(?i)^((\\s*)(@charset)( [^;]+;\\s*))+")
+	previousIndex = 0
+	indexes = re.FindAllIndex(c.Css, -1)
+	groups = re.FindAllStringSubmatch(string(c.Css), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+		}
+		s := groups[counter][2] + strings.ToLower(groups[counter][3]) + groups[counter][4]
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(c.Css[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		c.Css = sb.Bytes()
+	}
 
 	// lowercase some popular @directives
 	sb.Reset()
