@@ -99,12 +99,12 @@ func main() {
 
 	of, oe := os.Create(outfile)
 	if oe == nil {
+		defer of.Close()
 		for i := 0; i < len(flag.Args()); i++ {
 			if results[i] != nil {
 				of.Write(results[i])
 			}
 		}
 	}
-	of.Close()
 	os.Exit(0)
 }
