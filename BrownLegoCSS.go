@@ -509,6 +509,11 @@ func (c *CssCompressor) performGeneralCleanup() {
 			if val < 16 {
 				hexcolor.WriteString("0")
 			}
+			// If someone passes an RGB value that's too big to express in two characters, round down.
+			// Probably should throw out a warning here, but generating valid CSS is a bigger concern.
+			if val > 255 {
+				val = 255
+			}
 			hexcolor.WriteString(fmt.Sprintf("%x", val))
 		}
 		sb.WriteString(hexcolor.String())
