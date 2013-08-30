@@ -62,6 +62,29 @@ type CssCompressor struct {
 	comments        []string
 }
 
+func RegexFindReplace(input []byte, regex string, handlefunc func(groups []string) string) []byte {
+	var sb bytes.Buffer
+	re, _ := regexp.Compile(regex)
+	previousIndex := 0
+	indexes := re.FindAllIndex(input, -1)
+	groups := re.FindAllStringSubmatch(string(input), -1)
+	for counter, i := range indexes {
+		if i[0] > 0 {
+			sb.WriteString(string(input[previousIndex:i[0]]))
+		}
+		s := handlefunc(groups[counter])
+		sb.WriteString(s)
+		previousIndex = i[1]
+	}
+	if previousIndex > 0 {
+		sb.WriteString(string(input[previousIndex:]))
+	}
+	if sb.Len() > 0 {
+		return sb.Bytes()
+	}
+	return input
+}
+
 func (c *CssCompressor) extractDataUris() {
 	re, _ := regexp.Compile("(?i)url\\(\\s*([\"']?)data\\:")
 	re2, _ := regexp.Compile("\\s+")
@@ -239,32 +262,22 @@ func (c *CssCompressor) processComments() {
 
 func (c *CssCompressor) performGeneralCleanup() {
 	// This function does a lot, ok?
+	var sb bytes.Buffer
+	var previousIndex int
+	var re *regexp.Regexp
 
 	// Remove the spaces before the things that should not have spaces before them.
 	// But, be careful not to turn "p :link {...}" into "p:link{...}"
 	// Swap out any pseudo-class colons with the token, and then swap back.
-	re, _ := regexp.Compile("(^|\\})(([^\\{:])+:)+([^\\{]*\\{)")
-	var sb bytes.Buffer
-	previousIndex := 0
-	indexes := re.FindAllIndex(c.Css, -1)
-	groups := re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := groups[counter][0]
-		s = strings.Replace(s, ":", "___YUICSSMIN_PSEUDOCLASSCOLON___", -1)
-		s = strings.Replace(s, "\\\\", "\\\\\\\\", -1)
-		s = strings.Replace(s, "\\$", "\\\\\\$", -1)
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(^|\\})(([^\\{:])+:)+([^\\{]*\\{)",
+		func(groups []string) string {
+			s := groups[0]
+			s = strings.Replace(s, ":", "___YUICSSMIN_PSEUDOCLASSCOLON___", -1)
+			s = strings.Replace(s, "\\\\", "\\\\\\\\", -1)
+			s = strings.Replace(s, "\\$", "\\\\\\$", -1)
+			return s
+		})
 
 	// Remove spaces before the things that should not have spaces before them.
 	re, _ = regexp.Compile("\\s+([!{};:>+\\(\\)\\],])")
@@ -275,169 +288,57 @@ func (c *CssCompressor) performGeneralCleanup() {
 	c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PSEUDOCLASSCOLON___"), []byte(":"), -1)
 
 	// retain space for special IE6 cases
-	sb.Reset()
-	re, _ = regexp.Compile("(?i):first\\-(line|letter)(\\{|,)")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := strings.ToLower(":first-"+groups[counter][1]) + " " + groups[counter][2]
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i):first\\-(line|letter)(\\{|,)",
+		func(groups []string) string {
+			return strings.ToLower(":first-"+groups[1]) + " " + groups[2]
+		})
 
 	// no space after the end of a preserved comment
 	c.Css = bytes.Replace(c.Css, []byte("*/ "), []byte("*/"), -1)
 
-	// If there is a @charset, then only allow one, and push to the top of the file.
-	// re, _ = regexp.Compile("^(.*)(@charset \"[^\"]*\";)")
-	// c.Css = re.ReplaceAll(c.Css, []byte("$2$1"))
-	// re, _ = regexp.Compile("^(\\s*@charset [^;]+;\\s*)+")
-	// c.Css = re.ReplaceAll(c.Css, []byte("$1"))
-
 	// If there are multiple @charset directives, push them to the top of the file.
-	sb.Reset()
-	re, _ = regexp.Compile("(?i)^(.*)(@charset)( \"[^\"]*\";)")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := strings.ToLower(groups[counter][2]) + groups[counter][3] + groups[counter][1]
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i)^(.*)(@charset)( \"[^\"]*\";)",
+		func(groups []string) string {
+			return strings.ToLower(groups[2]) + groups[3] + groups[1]
+		})
 
 	// When all @charset are at the top, remove the second and after (as they are completely ignored).
-	sb.Reset()
-	re, _ = regexp.Compile("(?i)^((\\s*)(@charset)( [^;]+;\\s*))+")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := groups[counter][2] + strings.ToLower(groups[counter][3]) + groups[counter][4]
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i)^((\\s*)(@charset)( [^;]+;\\s*))+",
+		func(groups []string) string {
+			return groups[2] + strings.ToLower(groups[3]) + groups[4]
+		})
 
 	// lowercase some popular @directives
-	sb.Reset()
-	re, _ = regexp.Compile("(?i)@(charset|font-face|import|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?keyframe|media|page|namespace)")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := "@" + strings.ToLower(groups[counter][1])
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i)@(charset|font-face|import|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?keyframe|media|page|namespace)",
+		func(groups []string) string {
+			return "@" + strings.ToLower(groups[1])
+		})
 
 	// lowercase some more common pseudo-elements
-	sb.Reset()
-	re, _ = regexp.Compile("(?i):(active|after|before|checked|disabled|empty|enabled|first-(?:child|of-type)|focus|hover|last-(?:child|of-type)|link|only-(?:child|of-type)|root|:selection|target|visited)")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := ":" + strings.ToLower(groups[counter][1])
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i):(active|after|before|checked|disabled|empty|enabled|first-(?:child|of-type)|focus|hover|last-(?:child|of-type)|link|only-(?:child|of-type)|root|:selection|target|visited)",
+		func(groups []string) string {
+			return ":" + strings.ToLower(groups[1])
+		})
 
 	// lowercase some more common functions
-	sb.Reset()
-	re, _ = regexp.Compile("(?i):(lang|not|nth-child|nth-last-child|nth-last-of-type|nth-of-type|(?:-(?:moz|webkit)-)?any)\\(")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := ":" + strings.ToLower(groups[counter][1]) + "("
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i):(lang|not|nth-child|nth-last-child|nth-last-of-type|nth-of-type|(?:-(?:moz|webkit)-)?any)\\(",
+		func(groups []string) string {
+			return ":" + strings.ToLower(groups[1]) + "("
+		})
 
 	// lower case some common function that can be values
 	// NOTE: rgb() isn't useful as we replace with #hex later, as well as and() is already done for us right after this
-	sb.Reset()
-	re, _ = regexp.Compile("(?i)([:,\\( ]\\s*)(attr|color-stop|from|rgba|to|url|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?(?:calc|max|min|(?:repeating-)?(?:linear|radial)-gradient)|-webkit-gradient)")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := groups[counter][1] + strings.ToLower(groups[counter][2])
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
-	/*+        sb = new StringBuffer();
-	  +        p = Pattern.compile("(?i)([:,\\( ]\\s*)(attr|color-stop|from|rgba|to|url|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?(?:calc|max|min|(?:repeating-)?(?:linear|radial)-gradient)|-webkit-gradient)");
-	  +        m = p.matcher(css);
-	  +        while (m.find()) {
-	  +            m.appendReplacement(sb, m.group(1) + m.group(2).toLowerCase());
-	  +        }
-	  +        m.appendTail(sb);
-	  +        css = sb.toString();*/
+	c.Css = RegexFindReplace(c.Css,
+		"(?i)([:,\\( ]\\s*)(attr|color-stop|from|rgba|to|url|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?(?:calc|max|min|(?:repeating-)?(?:linear|radial)-gradient)|-webkit-gradient)",
+		func(groups []string) string {
+			return groups[1] + strings.ToLower(groups[2])
+		})
 
 	// Put the space back in some cases, to support stuff like
 	// @media screen and (-webkit-min-device-pixel-ratio:0){
@@ -466,25 +367,11 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 	// Replace background-position:0; with background-position:0 0;
 	// same for transform-origin
-	sb.Reset()
-	re, _ = regexp.Compile("(?i)(background-position|webkit-mask-position|transform-origin|webkit-transform-origin|moz-transform-origin|o-transform-origin|ms-transform-origin):0(;|})")
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := strings.ToLower(groups[counter][1]) + ":0 0" + groups[counter][2]
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i)(background-position|webkit-mask-position|transform-origin|webkit-transform-origin|moz-transform-origin|o-transform-origin|ms-transform-origin):0(;|})",
+		func(groups []string) string {
+			return strings.ToLower(groups[1]) + ":0 0" + groups[2]
+		})
 
 	// Replace 0.6 to .6, but only when preceded by : or a white-space
 	re, _ = regexp.Compile("(:|\\s)0+\\.(\\d+)")
@@ -492,39 +379,26 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 	// Shorten colors from rgb(51,102,153) to #336699
 	// This makes it more likely that it'll get further compressed in the next step.
-	sb.Reset()
-	previousIndex = 0
-	re, _ = regexp.Compile("rgb\\s*\\(\\s*([0-9,\\s]+)\\s*\\)")
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		rgbcolors := strings.Split(groups[counter][1], ",")
-		var hexcolor bytes.Buffer
-		hexcolor.WriteString("#")
-		for _, colour := range rgbcolors {
-			val, _ := strconv.Atoi(colour)
-			if val < 16 {
-				hexcolor.WriteString("0")
+	c.Css = RegexFindReplace(c.Css,
+		"rgb\\s*\\(\\s*([0-9,\\s]+)\\s*\\)",
+		func(groups []string) string {
+			rgbcolors := strings.Split(groups[1], ",")
+			var hexcolor bytes.Buffer
+			hexcolor.WriteString("#")
+			for _, colour := range rgbcolors {
+				val, _ := strconv.Atoi(colour)
+				if val < 16 {
+					hexcolor.WriteString("0")
+				}
+				// If someone passes an RGB value that's too big to express in two characters, round down.
+				// Probably should throw out a warning here, but generating valid CSS is a bigger concern.
+				if val > 255 {
+					val = 255
+				}
+				hexcolor.WriteString(fmt.Sprintf("%x", val))
 			}
-			// If someone passes an RGB value that's too big to express in two characters, round down.
-			// Probably should throw out a warning here, but generating valid CSS is a bigger concern.
-			if val > 255 {
-				val = 255
-			}
-			hexcolor.WriteString(fmt.Sprintf("%x", val))
-		}
-		sb.WriteString(hexcolor.String())
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+			return hexcolor.String()
+		})
 
 	// Shorten colors from #AABBCC to #ABC. Note that we want to make sure
 	// the color is not preceded by either ", " or =. Indeed, the property
@@ -595,25 +469,11 @@ func (c *CssCompressor) performGeneralCleanup() {
 	}
 
 	// border: none -> border:0
-	re, _ = regexp.Compile("(?i)(border|border-top|border-right|border-bottom|border-left|outline|background):none(;|})")
-	sb.Reset()
-	previousIndex = 0
-	indexes = re.FindAllIndex(c.Css, -1)
-	groups = re.FindAllStringSubmatch(string(c.Css), -1)
-	for counter, i := range indexes {
-		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
-		}
-		s := strings.ToLower(groups[counter][1]) + ":0" + groups[counter][2]
-		sb.WriteString(s)
-		previousIndex = i[1]
-	}
-	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
-	}
-	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
-	}
+	c.Css = RegexFindReplace(c.Css,
+		"(?i)(border|border-top|border-right|border-bottom|border-left|outline|background):none(;|})",
+		func(groups []string) string {
+			return strings.ToLower(groups[1]) + ":0" + groups[2]
+		})
 
 	// shorter opacity IE filter
 	re, _ = regexp.Compile("(?i)progid:DXImageTransform.Microsoft.Alpha\\(Opacity=")
