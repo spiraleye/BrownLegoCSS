@@ -39,14 +39,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/spiraleye/BrownLegoCSS"
 	"io/ioutil"
 	"os"
 	"runtime"
 	"sync"
+
+	"github.com/spiraleye/brownlegocss"
 )
 
-type Data struct {
+type data struct {
 	idx int
 	bts []byte
 }
@@ -59,7 +60,7 @@ func main() {
 	flag.Parse()
 
 	// Let the concurrency magic begin.
-	dataChan := make(chan Data)
+	dataChan := make(chan data)
 	results := make([][]byte, len(flag.Args()))
 
 	var wg sync.WaitGroup
@@ -72,7 +73,7 @@ func main() {
 			if err != nil {
 				fmt.Printf("Error reading file %s: %s\n", infile, err)
 			} else {
-				dataChan <- Data{idx: i, bts: contents}
+				dataChan <- data{idx: i, bts: contents}
 			}
 		}
 		close(dataChan)
@@ -81,17 +82,17 @@ func main() {
 	// Grab data from the channel and append it to our slice.
 	for cssdata := range dataChan {
 		//fmt.Printf("Read file for %d\n", cssdata.idx)
-		data_fragment := Data{idx: cssdata.idx, bts: cssdata.bts}
+		dataFragment := data{idx: cssdata.idx, bts: cssdata.bts}
 		wg.Add(1)
 		go func() {
-			//fmt.Printf("Starting %d\n", data_fragment.idx)
-			compressor := BrownLegoCSS.CssCompressor{Css: data_fragment.bts}
+			//fmt.Printf("Starting %d\n", dataFragment.idx)
+			compressor := brownlegocss.CSSCompressor{CSS: dataFragment.bts}
 			csresult := compressor.Compress()
 			m.Lock()
-			results[data_fragment.idx] = csresult
+			results[dataFragment.idx] = csresult
 			m.Unlock()
 			wg.Done()
-			//fmt.Printf("Done %d\n", data_fragment.idx)
+			//fmt.Printf("Done %d\n", dataFragment.idx)
 		}()
 	}
 	wg.Wait()

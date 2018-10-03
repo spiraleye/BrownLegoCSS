@@ -38,7 +38,7 @@
  *
  */
 
-package BrownLegoCSS
+package brownlegocss
 
 import (
 	"bytes"
@@ -68,10 +68,10 @@ func testExtractDataUris(t *testing.T) {
 	}
 
 	for i, c := range tests {
-		compressor := CssCompressor{}
-		compressor.Css = []byte(tests[i].s)
+		compressor := CSSCompressor{}
+		compressor.CSS = []byte(tests[i].s)
 		compressor.extractDataUris()
-		got := string(compressor.Css)
+		got := string(compressor.CSS)
 		if got != c.want {
 			t.Errorf("css: extractDataUris(%q) == (%q), want %q", c.s, got, c.want)
 		}
@@ -109,10 +109,10 @@ func testExtractComments(t *testing.T) {
 	}
 
 	for i, c := range tests {
-		compressor := CssCompressor{}
-		compressor.Css = []byte(tests[i].s)
+		compressor := CSSCompressor{}
+		compressor.CSS = []byte(tests[i].s)
 		compressor.extractComments()
-		got := string(compressor.Css)
+		got := string(compressor.CSS)
 		if got != c.want {
 			t.Errorf("css: extractComments(%q) == (%q), want %q", c.s, got, c.want)
 		}
@@ -164,10 +164,10 @@ func testExtractStrings(t *testing.T) {
 		},
 	}
 	for i, c := range tests {
-		compressor := CssCompressor{}
-		compressor.Css = []byte(tests[i].s)
+		compressor := CSSCompressor{}
+		compressor.CSS = []byte(tests[i].s)
 		compressor.extractStrings()
-		got := string(compressor.Css)
+		got := string(compressor.CSS)
 		if got != c.want {
 			t.Errorf("css: extractStrings(%q) == (%q), want %q", c.s, got, c.want)
 		}
@@ -190,11 +190,11 @@ func testProcessComments(t *testing.T) {
 		{"/* Hack comment \\*/ kek /* asdf */", "/*___YUICSSMIN_PRESERVED_TOKEN_0___*/ kek /*___YUICSSMIN_PRESERVED_TOKEN_1___*/"},
 	}
 	for i, c := range tests {
-		compressor := CssCompressor{}
-		compressor.Css = []byte(tests[i].s)
+		compressor := CSSCompressor{}
+		compressor.CSS = []byte(tests[i].s)
 		compressor.extractComments()
 		compressor.processComments()
-		got := string(compressor.Css)
+		got := string(compressor.CSS)
 		if got != c.want {
 			t.Errorf("css: processComments(%q) == (%q), want %q", c.s, got, c.want)
 		}
@@ -217,7 +217,7 @@ func testEverything(t *testing.T) {
 
 		compareContents = bytes.TrimSpace(compareContents)
 
-		compressor := CssCompressor{Css: testContents}
+		compressor := CSSCompressor{CSS: testContents}
 		results := compressor.Compress()
 		if string(results) != string(compareContents) {
 			t.Logf("%s\n", minFile)
