@@ -1,0 +1,13 @@
+language: go
+go:
+  - "1.10.x"
+  - "1.11.x"
+  - master
+
+sudo: false
+
+notifications:
+  email: false
+
+before_install:
+  - go get -u golang.org/x/lint/golint
