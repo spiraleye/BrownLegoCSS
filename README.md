@@ -12,7 +12,7 @@ This is a Go-based replacement for YUICompressor's CSS compressor.  This version
 
 ## Name
 
-Weird name, right?  Our inspiration for it comes from the GIF at http://thejoysofcode.com/post/37648725275/when-i-release-software-and-immediately-get-sued-by-a ;-)
+Weird name, right?  Our inspiration for it comes from the GIF at [https://static.fjcdn.com/gifs/Star_c7b4a0_1903495.gif](https://static.fjcdn.com/gifs/Star_c7b4a0_1903495.gif) ;-)
 
 ## License
 
