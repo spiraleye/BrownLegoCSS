@@ -1,10 +1,9 @@
 # BrownLegoCSS
 
-## Description
-
 This is a Go-based replacement for YUICompressor's CSS compressor.  This version seems to offer significant performance improvements over the original Java version, mostly due to it being compiled to native code, and also being able to compress/minify the contents of multiple files simultaneously through Go's awesome concurrency features.  However, there is probably a lot that can still be done in order to improve performance further, so please feel free to fork, improve, and submit pull requests!
 
 ## Files
+
 * `./BrownLegoCSS.go` - Class/Lib/thing-that-does-the-hard-work.
 * `./BrownLegoCSS_test.go` - Unit tests for the above.
 * `./tests/*.css` - Input files for unit tests.
@@ -16,6 +15,7 @@ This is a Go-based replacement for YUICompressor's CSS compressor.  This version
 Weird name, right?  Our inspiration for it comes from the GIF at http://thejoysofcode.com/post/37648725275/when-i-release-software-and-immediately-get-sued-by-a ;-)
 
 ## License
+
 The copyrights embodied in the contents of this project's source files are licensed
 by Spiraleye Studios under the 3-Clause BSD open source license,
 as follows:
@@ -44,14 +44,14 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Derivative Work
-Most of the content in `BrownLegoCSS.go` is derived from the original Java code at https://github.com/yui/yuicompressor/.  For this reason, we have included the original license information below:
 
-> YUI Compressor  
-http://developer.yahoo.com/yui/compressor/  
-Author: Julien Lecomte -  http://www.julienlecomte.net/   
-Author: Isaac Schlueter - http://foohack.com/  
-Author: Stoyan Stefanov - http://phpied.com/  
-Copyright (c) 2011 Yahoo! Inc.  All rights reserved.  
-The copyrights embodied in the content of this file are licensed   
+Most of the content in `BrownLegoCSS.go` is derived from the original Java code at [https://github.com/yui/yuicompressor/](https://github.com/yui/yuicompressor/).  For this reason, we have included the original license information below:
+
+> YUI Compressor
+[https://github.com/yui/yuicompressor/](http://developer.yahoo.com/yui/compressor/)
+Author: Julien Lecomte -  [http://www.julienlecomte.net/](http://www.julienlecomte.net/)
+Author: Isaac Schlueter - [http://foohack.com/](http://foohack.com/)
+Author: Stoyan Stefanov - [http://phpied.com/](http://phpied.com/)
+Copyright (c) 2011 Yahoo! Inc.  All rights reserved.
+The copyrights embodied in the content of this file are licensed
 by Yahoo! Inc. under the BSD (revised) open source license.
-
