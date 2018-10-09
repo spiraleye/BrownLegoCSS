@@ -46,7 +46,7 @@
  *
  */
 
-package BrownLegoCSS
+package brownlegocss
 
 import (
 	"bytes"
@@ -56,13 +56,14 @@ import (
 	"strings"
 )
 
-type CssCompressor struct {
-	Css             []byte
+// CSSCompressor contains data needed for compressing CSS data.
+type CSSCompressor struct {
+	CSS             []byte
 	preservedTokens []string
 	comments        []string
 }
 
-func RegexFindReplace(input []byte, regex string, handlefunc func(groups []string) string) []byte {
+func regexFindReplace(input []byte, regex string, handlefunc func(groups []string) string) []byte {
 	var sb bytes.Buffer
 	re, _ := regexp.Compile(regex)
 	previousIndex := 0
@@ -85,16 +86,16 @@ func RegexFindReplace(input []byte, regex string, handlefunc func(groups []strin
 	return input
 }
 
-func (c *CssCompressor) extractDataUris() {
+func (c *CSSCompressor) extractDataUris() {
 	re, _ := regexp.Compile("(?i)url\\(\\s*([\"']?)data\\:")
 	re2, _ := regexp.Compile("\\s+")
 
 	var sb bytes.Buffer
 	appendIndex := 0
-	maxIndex := len(c.Css) - 1
+	maxIndex := len(c.CSS) - 1
 
-	indexes := re.FindAllIndex(c.Css, -1)
-	submatches := re.FindAllStringSubmatch(string(c.Css), -1)
+	indexes := re.FindAllIndex(c.CSS, -1)
+	submatches := re.FindAllStringSubmatch(string(c.CSS), -1)
 
 	for counter, i := range indexes {
 		startIndex := i[0] + 4 // "url(".length()
@@ -107,20 +108,20 @@ func (c *CssCompressor) extractDataUris() {
 		foundTerminator := false
 
 		for foundTerminator == false && endIndex+1 <= maxIndex {
-			endIndex = bytes.IndexByte(c.Css[endIndex+1:], terminator[0]) + len(c.Css[:endIndex]) + 1
-			if (endIndex > 0) && (string(c.Css[endIndex-1]) != "\\") {
+			endIndex = bytes.IndexByte(c.CSS[endIndex+1:], terminator[0]) + len(c.CSS[:endIndex]) + 1
+			if (endIndex > 0) && (string(c.CSS[endIndex-1]) != "\\") {
 				foundTerminator = true
 				if terminator != ")" {
-					endIndex = bytes.IndexByte(c.Css[endIndex:], ')') + len(c.Css[:endIndex])
+					endIndex = bytes.IndexByte(c.CSS[endIndex:], ')') + len(c.CSS[:endIndex])
 				}
 			}
 		}
 
 		// Enough searching, start moving stuff over to the buffer
-		sb.WriteString(string(c.Css[appendIndex:i[0]]))
+		sb.WriteString(string(c.CSS[appendIndex:i[0]]))
 
 		if foundTerminator {
-			var token string = string(c.Css[startIndex:endIndex])
+			token := string(c.CSS[startIndex:endIndex])
 			token = re2.ReplaceAllString(token, "")
 			c.preservedTokens = append(c.preservedTokens, token)
 
@@ -130,58 +131,58 @@ func (c *CssCompressor) extractDataUris() {
 			appendIndex = endIndex + 1
 		} else {
 			// No end terminator found, re-add the whole match. Should we throw/warn here?
-			sb.WriteString(string(c.Css[i[0]:i[1]]))
+			sb.WriteString(string(c.CSS[i[0]:i[1]]))
 			appendIndex = i[1]
 		}
 	}
 	if appendIndex > 0 {
-		sb.WriteString(string(c.Css[appendIndex:]))
+		sb.WriteString(string(c.CSS[appendIndex:]))
 	}
 	// Our string buffer is not empty, so something must have changed.
 	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
+		c.CSS = sb.Bytes()
 	}
 }
 
-func (c *CssCompressor) extractComments() {
+func (c *CSSCompressor) extractComments() {
 	var sb bytes.Buffer
 	startIndex := 0
 	endIndex := 0
 
-	tmpCss := c.Css
-	for startIndex = bytes.Index(tmpCss, []byte("/*")); startIndex >= 0; {
-		sb.WriteString(string(tmpCss[:startIndex]))
+	tmpCSS := c.CSS
+	for startIndex = bytes.Index(tmpCSS, []byte("/*")); startIndex >= 0; {
+		sb.WriteString(string(tmpCSS[:startIndex]))
 
-		endIndex = bytes.Index(tmpCss[startIndex+2:], []byte("*/"))
+		endIndex = bytes.Index(tmpCSS[startIndex+2:], []byte("*/"))
 		if endIndex < 0 {
-			endIndex = len(tmpCss)
+			endIndex = len(tmpCSS)
 		}
-		c.comments = append(c.comments, string(tmpCss[startIndex+2:endIndex+startIndex+2]))
+		c.comments = append(c.comments, string(tmpCSS[startIndex+2:endIndex+startIndex+2]))
 		sb.WriteString(
 			string("/*___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_" +
 				(strconv.Itoa(len(c.comments) - 1)) +
 				"___*/"))
 
-		tmpCss = tmpCss[startIndex+2+endIndex+2:]
-		startIndex = bytes.Index(tmpCss, []byte("/*"))
+		tmpCSS = tmpCSS[startIndex+2+endIndex+2:]
+		startIndex = bytes.Index(tmpCSS, []byte("/*"))
 	}
-	sb.WriteString(string(tmpCss))
-	c.Css = sb.Bytes()
+	sb.WriteString(string(tmpCSS))
+	c.CSS = sb.Bytes()
 }
 
-func (c *CssCompressor) extractStrings() {
+func (c *CSSCompressor) extractStrings() {
 	re, _ := regexp.Compile("(\"([^\\\\\"]|\\\\.|\\\\)*\")|('([^\\\\']|\\\\.|\\\\)*')")
 	re2, _ := regexp.Compile("(?i)progid:DXImageTransform.Microsoft.Alpha\\(Opacity=")
 
 	var sb bytes.Buffer
 	previousIndex := 0
 
-	indexes := re.FindAllIndex(c.Css, -1)
-	tokens := re.FindAllStringSubmatch(string(c.Css), -1)
+	indexes := re.FindAllIndex(c.CSS, -1)
+	tokens := re.FindAllStringSubmatch(string(c.CSS), -1)
 
 	for counter, i := range indexes {
 		if i[0] > 0 {
-			sb.WriteString(string(c.Css[previousIndex:i[0]]))
+			sb.WriteString(string(c.CSS[previousIndex:i[0]]))
 		}
 		token := tokens[counter][0]
 		quote := token[0]
@@ -191,7 +192,7 @@ func (c *CssCompressor) extractStrings() {
 		// one, maybe more? put'em back then
 		if strings.Index(token, "___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_") >= 0 {
 			max := len(c.comments)
-			for j := 0; j < max; j += 1 {
+			for j := 0; j < max; j++ {
 				token = strings.Replace(token, "___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_"+strconv.Itoa(j)+"___", c.comments[j], -1)
 			}
 		}
@@ -206,18 +207,18 @@ func (c *CssCompressor) extractStrings() {
 		previousIndex = i[1]
 	}
 	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
+		sb.WriteString(string(c.CSS[previousIndex:]))
 	}
 	// Our string buffer is not empty, so something must have changed.
 	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
+		c.CSS = sb.Bytes()
 	}
 }
 
-func (c *CssCompressor) processComments() {
+func (c *CSSCompressor) processComments() {
 	max := len(c.comments)
 
-	for i := 0; i < max; i += 1 {
+	for i := 0; i < max; i++ {
 		token := c.comments[i]
 		placeholder := "___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_" + strconv.Itoa(i) + "___"
 
@@ -225,7 +226,7 @@ func (c *CssCompressor) processComments() {
 		// so push to the preserved tokens while stripping the !
 		if strings.Index(token, "!") == 0 {
 			c.preservedTokens = append(c.preservedTokens, token)
-			c.Css = bytes.Replace(c.Css, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
+			c.CSS = bytes.Replace(c.CSS, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
 			continue
 		}
 
@@ -234,11 +235,11 @@ func (c *CssCompressor) processComments() {
 		// TODO: this doesn't seem to be working as intended, even in the Java version.
 		if token != "" && strings.LastIndex(token, "\\") == len(token)-1 {
 			c.preservedTokens = append(c.preservedTokens, "\\")
-			c.Css = bytes.Replace(c.Css, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
+			c.CSS = bytes.Replace(c.CSS, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
 
 			i = i + 1 // attn: advancing the loop
 			c.preservedTokens = append(c.preservedTokens, "")
-			c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_"+strconv.Itoa(i)+"___"), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
+			c.CSS = bytes.Replace(c.CSS, []byte("___YUICSSMIN_PRESERVE_CANDIDATE_COMMENT_"+strconv.Itoa(i)+"___"), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
 
 			continue
 		}
@@ -246,21 +247,21 @@ func (c *CssCompressor) processComments() {
 		// keep empty comments after child selectors (IE7 hack)
 		// e.g. html >/**/ body
 		if len(token) == 0 {
-			startIndex := bytes.Index(c.Css, []byte(placeholder))
+			startIndex := bytes.Index(c.CSS, []byte(placeholder))
 			if startIndex > 2 {
-				if c.Css[startIndex-3] == '>' {
+				if c.CSS[startIndex-3] == '>' {
 					c.preservedTokens = append(c.preservedTokens, "")
-					c.Css = bytes.Replace(c.Css, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
+					c.CSS = bytes.Replace(c.CSS, []byte(placeholder), []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(len(c.preservedTokens)-1)+"___"), -1)
 				}
 			}
 		}
 
 		// in all other cases kill the comment
-		c.Css = bytes.Replace(c.Css, []byte("/*"+placeholder+"*/"), []byte(""), -1)
+		c.CSS = bytes.Replace(c.CSS, []byte("/*"+placeholder+"*/"), []byte(""), -1)
 	}
 }
 
-func (c *CssCompressor) performGeneralCleanup() {
+func (c *CSSCompressor) performGeneralCleanup() {
 	// This function does a lot, ok?
 	var sb bytes.Buffer
 	var previousIndex int
@@ -269,7 +270,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 	// Remove the spaces before the things that should not have spaces before them.
 	// But, be careful not to turn "p :link {...}" into "p:link{...}"
 	// Swap out any pseudo-class colons with the token, and then swap back.
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(^|\\})(([^\\{:])+:)+([^\\{]*\\{)",
 		func(groups []string) string {
 			s := groups[0]
@@ -281,52 +282,52 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 	// Remove spaces before the things that should not have spaces before them.
 	re, _ = regexp.Compile("\\s+([!{};:>+\\(\\)\\],])")
-	c.Css = re.ReplaceAll(c.Css, []byte("$1"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("$1"))
 	// Restore spaces for !important
-	c.Css = bytes.Replace(c.Css, []byte("!important"), []byte(" !important"), -1)
+	c.CSS = bytes.Replace(c.CSS, []byte("!important"), []byte(" !important"), -1)
 	// bring back the colon
-	c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PSEUDOCLASSCOLON___"), []byte(":"), -1)
+	c.CSS = bytes.Replace(c.CSS, []byte("___YUICSSMIN_PSEUDOCLASSCOLON___"), []byte(":"), -1)
 
 	// retain space for special IE6 cases
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i):first\\-(line|letter)(\\{|,)",
 		func(groups []string) string {
 			return strings.ToLower(":first-"+groups[1]) + " " + groups[2]
 		})
 
 	// no space after the end of a preserved comment
-	c.Css = bytes.Replace(c.Css, []byte("*/ "), []byte("*/"), -1)
+	c.CSS = bytes.Replace(c.CSS, []byte("*/ "), []byte("*/"), -1)
 
 	// If there are multiple @charset directives, push them to the top of the file.
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i)^(.*)(@charset)( \"[^\"]*\";)",
 		func(groups []string) string {
 			return strings.ToLower(groups[2]) + groups[3] + groups[1]
 		})
 
 	// When all @charset are at the top, remove the second and after (as they are completely ignored).
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i)^((\\s*)(@charset)( [^;]+;\\s*))+",
 		func(groups []string) string {
 			return groups[2] + strings.ToLower(groups[3]) + groups[4]
 		})
 
 	// lowercase some popular @directives
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i)@(charset|font-face|import|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?keyframe|media|page|namespace)",
 		func(groups []string) string {
 			return "@" + strings.ToLower(groups[1])
 		})
 
 	// lowercase some more common pseudo-elements
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i):(active|after|before|checked|disabled|empty|enabled|first-(?:child|of-type)|focus|hover|last-(?:child|of-type)|link|only-(?:child|of-type)|root|:selection|target|visited)",
 		func(groups []string) string {
 			return ":" + strings.ToLower(groups[1])
 		})
 
 	// lowercase some more common functions
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i):(lang|not|nth-child|nth-last-child|nth-last-of-type|nth-of-type|(?:-(?:moz|webkit)-)?any)\\(",
 		func(groups []string) string {
 			return ":" + strings.ToLower(groups[1]) + "("
@@ -334,7 +335,7 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 	// lower case some common function that can be values
 	// NOTE: rgb() isn't useful as we replace with #hex later, as well as and() is already done for us right after this
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i)([:,\\( ]\\s*)(attr|color-stop|from|rgba|to|url|(?:-(?:atsc|khtml|moz|ms|o|wap|webkit)-)?(?:calc|max|min|(?:repeating-)?(?:linear|radial)-gradient)|-webkit-gradient)",
 		func(groups []string) string {
 			return groups[1] + strings.ToLower(groups[2])
@@ -343,31 +344,31 @@ func (c *CssCompressor) performGeneralCleanup() {
 	// Put the space back in some cases, to support stuff like
 	// @media screen and (-webkit-min-device-pixel-ratio:0){
 	re, _ = regexp.Compile("(?i)\\band\\(")
-	c.Css = re.ReplaceAll(c.Css, []byte("and ("))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("and ("))
 
 	// Remove the spaces after the things that should not have spaces after them.
 	re, _ = regexp.Compile("([!{}:;>+\\(\\[,])\\s+")
-	c.Css = re.ReplaceAll(c.Css, []byte("$1"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("$1"))
 
 	// remove unnecessary semicolons
 	re, _ = regexp.Compile(";+}")
-	c.Css = re.ReplaceAll(c.Css, []byte("}"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("}"))
 
 	// Replace 0(px,em,%) with 0.
 	re, _ = regexp.Compile("(?i)(^|[^0-9])(?:0?\\.)?0(?:px|em|%|in|cm|mm|pc|pt|ex|deg|g?rad|m?s|k?hz)")
-	c.Css = re.ReplaceAll(c.Css, []byte("${1}0"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("${1}0"))
 
 	// Replace 0 0 0 0; with 0.
 	re, _ = regexp.Compile(":0 0 0 0(;|})")
 	re2, _ := regexp.Compile(":0 0 0(;|})")
 	re3, _ := regexp.Compile(":0 0(;|})")
-	c.Css = re.ReplaceAll(c.Css, []byte(":0$1"))
-	c.Css = re2.ReplaceAll(c.Css, []byte(":0$1"))
-	c.Css = re3.ReplaceAll(c.Css, []byte(":0$1"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte(":0$1"))
+	c.CSS = re2.ReplaceAll(c.CSS, []byte(":0$1"))
+	c.CSS = re3.ReplaceAll(c.CSS, []byte(":0$1"))
 
 	// Replace background-position:0; with background-position:0 0;
 	// same for transform-origin
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i)(background-position|webkit-mask-position|transform-origin|webkit-transform-origin|moz-transform-origin|o-transform-origin|ms-transform-origin):0(;|})",
 		func(groups []string) string {
 			return strings.ToLower(groups[1]) + ":0 0" + groups[2]
@@ -375,11 +376,11 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 	// Replace 0.6 to .6, but only when preceded by : or a white-space
 	re, _ = regexp.Compile("(:|\\s)0+\\.(\\d+)")
-	c.Css = re.ReplaceAll(c.Css, []byte("$1.$2"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("$1.$2"))
 
 	// Shorten colors from rgb(51,102,153) to #336699
 	// This makes it more likely that it'll get further compressed in the next step.
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"rgb\\s*\\(\\s*([0-9,\\s]+)\\s*\\)",
 		func(groups []string) string {
 			rgbcolors := strings.Split(groups[1], ",")
@@ -412,12 +413,12 @@ func (c *CssCompressor) performGeneralCleanup() {
 	re, _ = regexp.Compile("(\\=\\s*?[\"']?)?" + "#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])" + "(:?\\}|[^0-9a-fA-F{][^{]*?\\})")
 	previousIndex = 0
 
-	for match := re.Find(c.Css[previousIndex:]); match != nil; match = re.Find(c.Css[previousIndex:]) {
-		index := re.FindIndex(c.Css[previousIndex:])
-		submatches := re.FindStringSubmatch(string(c.Css[previousIndex:]))
-		submatchIndexes := re.FindSubmatchIndex(c.Css[previousIndex:])
+	for match := re.Find(c.CSS[previousIndex:]); match != nil; match = re.Find(c.CSS[previousIndex:]) {
+		index := re.FindIndex(c.CSS[previousIndex:])
+		submatches := re.FindStringSubmatch(string(c.CSS[previousIndex:]))
+		submatchIndexes := re.FindSubmatchIndex(c.CSS[previousIndex:])
 
-		sb.WriteString(string(c.Css[previousIndex : index[0]+len(c.Css[:previousIndex])]))
+		sb.WriteString(string(c.CSS[previousIndex : index[0]+len(c.CSS[:previousIndex])]))
 
 		//boolean isFilter = (m.group(1) != null && !"".equals(m.group(1)));
 		// I hope the below is the equivalent of the above :P
@@ -440,14 +441,14 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 		// The "+ 4" below is a crazy hack which will come back to haunt me later.
 		// For now, it makes everything work 100%.
-		previousIndex = submatchIndexes[7] + len(c.Css[:previousIndex]) + 4
+		previousIndex = submatchIndexes[7] + len(c.CSS[:previousIndex]) + 4
 
 	}
 	if previousIndex > 0 {
-		sb.WriteString(string(c.Css[previousIndex:]))
+		sb.WriteString(string(c.CSS[previousIndex:]))
 	}
 	if sb.Len() > 0 {
-		c.Css = sb.Bytes()
+		c.CSS = sb.Bytes()
 	}
 
 	// Save a few chars by utilizing short colour keywords.
@@ -465,11 +466,11 @@ func (c *CssCompressor) performGeneralCleanup() {
 	}
 	for k, v := range colours {
 		re, _ = regexp.Compile("(:|\\s)" + k + "(;|})")
-		c.Css = re.ReplaceAll(c.Css, []byte("${1}"+v+"${2}"))
+		c.CSS = re.ReplaceAll(c.CSS, []byte("${1}"+v+"${2}"))
 	}
 
 	// border: none -> border:0
-	c.Css = RegexFindReplace(c.Css,
+	c.CSS = regexFindReplace(c.CSS,
 		"(?i)(border|border-top|border-right|border-bottom|border-left|outline|background):none(;|})",
 		func(groups []string) string {
 			return strings.ToLower(groups[1]) + ":0" + groups[2]
@@ -477,22 +478,23 @@ func (c *CssCompressor) performGeneralCleanup() {
 
 	// shorter opacity IE filter
 	re, _ = regexp.Compile("(?i)progid:DXImageTransform.Microsoft.Alpha\\(Opacity=")
-	c.Css = re.ReplaceAll(c.Css, []byte("alpha(opacity="))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("alpha(opacity="))
 
 	// Find a fraction that is used for Opera's -o-device-pixel-ratio query
 	// Add token to add the "\" back in later
 	re, _ = regexp.Compile("\\(([\\-A-Za-z]+):([0-9]+)\\/([0-9]+)\\)")
-	c.Css = re.ReplaceAll(c.Css, []byte("(${1}:${2}___YUI_QUERY_FRACTION___${3})"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte("(${1}:${2}___YUI_QUERY_FRACTION___${3})"))
 
 	// Remove empty rules.
 	re, _ = regexp.Compile("[^\\}\\{/;]+\\{\\}")
-	c.Css = re.ReplaceAll(c.Css, []byte(""))
+	c.CSS = re.ReplaceAll(c.CSS, []byte(""))
 
 	// Add "\" back to fix Opera -o-device-pixel-ratio query
-	c.Css = bytes.Replace(c.Css, []byte("___YUI_QUERY_FRACTION___"), []byte("/"), -1)
+	c.CSS = bytes.Replace(c.CSS, []byte("___YUI_QUERY_FRACTION___"), []byte("/"), -1)
 }
 
-func (c *CssCompressor) Compress() []byte {
+// Compress compresses the css in the CSS property and returns the compressed CSS as a byte slice.
+func (c *CSSCompressor) Compress() []byte {
 	c.extractDataUris()
 	c.extractComments()
 
@@ -504,23 +506,23 @@ func (c *CssCompressor) Compress() []byte {
 
 	// Normalize all whitespace strings to single spaces. Easier to work with that way.
 	re, _ := regexp.Compile("\\s+")
-	c.Css = re.ReplaceAll(c.Css, []byte(" "))
+	c.CSS = re.ReplaceAll(c.CSS, []byte(" "))
 
 	// Do lots and lots and lots of fun things
 	c.performGeneralCleanup()
 
 	// Replace multiple semi-colons in a row with a single one
 	re, _ = regexp.Compile(";;+")
-	c.Css = re.ReplaceAll(c.Css, []byte(";"))
+	c.CSS = re.ReplaceAll(c.CSS, []byte(";"))
 
 	// restore preserved comments and strings
 	for i, t := range c.preservedTokens {
-		c.Css = bytes.Replace(c.Css, []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(i)+"___"), []byte(t), -1)
+		c.CSS = bytes.Replace(c.CSS, []byte("___YUICSSMIN_PRESERVED_TOKEN_"+strconv.Itoa(i)+"___"), []byte(t), -1)
 	}
 
 	// Trim the final string (for any leading or trailing white spaces)
-	c.Css = bytes.TrimSpace(c.Css)
+	c.CSS = bytes.TrimSpace(c.CSS)
 
 	// Hooray, we're done!
-	return c.Css
+	return c.CSS
 }
